@@ -1,0 +1,114 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useCartContext } from "../context/CartContext";
+import { categoryImages } from "../assets/images";
+import { money } from "../utils/format";
+import Icon from "../components/Icon";
+
+const PAYMENTS = [
+  { id: "cod", label: "Cash on delivery", hint: "Pay when your parts arrive" },
+  { id: "bkash", label: "bKash / mobile wallet", hint: "We will send payment instructions" },
+  { id: "card", label: "Credit / debit card", hint: "Demo only – no real payment is taken" },
+];
+
+function Field({ label, name, type = "text", required = true, ...rest }) {
+  return (
+    <div>
+      <label className="label" htmlFor={name}>{label}</label>
+      <input id={name} name={name} type={type} required={required} className="input" {...rest} />
+    </div>
+  );
+}
+
+export default function Checkout() {
+  const { items, subtotal, shipping, total, clear } = useCartContext();
+  const [payment, setPayment] = useState("cod");
+  const [order, setOrder] = useState(null);
+
+  const submit = (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.currentTarget));
+    setOrder({ id: `CSZ-${Date.now().toString().slice(-6)}`, name: data.name, total, payment });
+    clear();
+  };
+
+  if (order) {
+    return (
+      <div className="container-x py-16">
+        <div className="mx-auto max-w-lg rounded-3xl border border-line bg-card p-8 text-center shadow-soft">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green-100 text-green-600"><Icon name="check" className="h-7 w-7" /></span>
+          <h1 className="mt-5 text-2xl font-bold">Thank you, {order.name}!</h1>
+          <p className="mt-2 text-mute">Your order <b className="text-ink">{order.id}</b> has been placed. Total: {money(order.total)} ({PAYMENTS.find((p) => p.id === order.payment).label}).</p>
+          <Link to="/shop" className="btn-primary mt-6 h-11 px-6">Continue shopping</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="container-x py-20 text-center">
+        <h1 className="text-2xl font-bold">Your cart is empty</h1>
+        <p className="mt-2 text-mute">Add some parts before checking out.</p>
+        <Link to="/shop" className="btn-primary mt-6 h-11 px-6">Browse products</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container-x py-8">
+      <h1 className="text-3xl font-bold tracking-tight">Checkout</h1>
+      <form onSubmit={submit} className="mt-6 grid gap-8 lg:grid-cols-[1fr_380px]">
+        <div className="space-y-6">
+          <section className="rounded-2xl border border-line bg-card p-5 sm:p-6">
+            <h2 className="mb-4 text-lg font-semibold">Contact</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Full name" name="name" autoComplete="name" />
+              <Field label="Phone" name="phone" type="tel" autoComplete="tel" />
+              <div className="sm:col-span-2"><Field label="Email" name="email" type="email" autoComplete="email" /></div>
+            </div>
+          </section>
+          <section className="rounded-2xl border border-line bg-card p-5 sm:p-6">
+            <h2 className="mb-4 text-lg font-semibold">Delivery address</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2"><Field label="Street address" name="address" autoComplete="street-address" /></div>
+              <Field label="City" name="city" autoComplete="address-level2" />
+              <Field label="Postcode" name="postcode" autoComplete="postal-code" />
+              <div className="sm:col-span-2"><Field label="Order note (optional)" name="note" required={false} /></div>
+            </div>
+          </section>
+          <section className="rounded-2xl border border-line bg-card p-5 sm:p-6">
+            <h2 className="mb-4 text-lg font-semibold">Payment</h2>
+            <div className="space-y-3">
+              {PAYMENTS.map((p) => (
+                <label key={p.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${payment === p.id ? "border-brand bg-brand/5" : "border-line"}`}>
+                  <input type="radio" name="payment" checked={payment === p.id} onChange={() => setPayment(p.id)} className="mt-1 h-4 w-4 accent-brand" />
+                  <span><span className="block text-sm font-semibold">{p.label}</span><span className="text-sm text-mute">{p.hint}</span></span>
+                </label>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <aside className="h-fit rounded-2xl border border-line bg-card p-5 sm:p-6 lg:sticky lg:top-24">
+          <h2 className="text-lg font-semibold">Order summary</h2>
+          <ul className="mt-4 divide-y divide-line">
+            {items.map((i) => (
+              <li key={i.id} className="flex items-center gap-3 py-3">
+                <img src={categoryImages[i.category]} alt="" className="h-14 w-14 rounded-lg bg-tile object-contain p-1" />
+                <div className="min-w-0 flex-1 text-sm"><div className="font-medium leading-snug">{i.name}</div><div className="text-mute">Qty {i.qty}</div></div>
+                <div className="text-sm font-semibold">{money(i.price * i.qty)}</div>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 space-y-2 border-t border-line pt-4 text-sm">
+            <div className="flex justify-between"><span className="text-mute">Subtotal</span><span>{money(subtotal)}</span></div>
+            <div className="flex justify-between"><span className="text-mute">Shipping</span><span>{shipping === 0 ? "Free" : money(shipping)}</span></div>
+            <div className="flex justify-between pt-1 text-lg font-bold"><span>Total</span><span>{money(total)}</span></div>
+          </div>
+          <button type="submit" className="btn-primary mt-5 h-12 w-full">Place order</button>
+        </aside>
+      </form>
+    </div>
+  );
+}

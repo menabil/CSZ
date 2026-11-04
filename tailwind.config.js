@@ -6,24 +6,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        page: c("page"),
-        card: c("card"),
-        ink: c("ink"),
-        mute: c("mute"),
-        line: c("line"),
-        brand: c("brand"),
-        onbrand: c("onbrand"),
-        copper: c("copper"),
-        tile: c("tile"),
-        deep: c("deep"),
+        page: c("page"), card: c("card"), ink: c("ink"), mute: c("mute"), line: c("line"),
+        brand: c("brand"), onbrand: c("onbrand"), accent: c("accent"), tile: c("tile"),
       },
-      fontFamily: {
-        display: ['"Space Grotesk"', "system-ui", "sans-serif"],
-        sans: ['"IBM Plex Sans"', "system-ui", "sans-serif"],
-      },
+      fontFamily: { sans: ["Inter", "system-ui", "sans-serif"] },
       boxShadow: {
-        soft: "0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -8px rgb(0 0 0 / 0.12)",
-        lift: "0 2px 4px rgb(0 0 0 / 0.05), 0 18px 36px -12px rgb(11 110 79 / 0.28)",
+        soft: "0 1px 2px rgb(15 23 42 / 0.05), 0 8px 24px -10px rgb(15 23 42 / 0.15)",
+        lift: "0 2px 4px rgb(15 23 42 / 0.05), 0 18px 36px -14px rgb(37 99 235 / 0.35)",
       },
     },
   },

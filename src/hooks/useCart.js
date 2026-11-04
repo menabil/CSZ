@@ -13,15 +13,13 @@ export default function useCart() {
   }, [notice]);
 
   const add = useCallback(
-    (product) => {
+    (product, qty = 1) => {
       setItems((cart) => {
         const found = cart.find((i) => i.id === product.id);
         if (found) {
-          return cart.map((i) =>
-            i.id === product.id ? { ...i, qty: Math.min(product.stock, i.qty + 1) } : i
-          );
+          return cart.map((i) => (i.id === product.id ? { ...i, qty: Math.min(product.stock, i.qty + qty) } : i));
         }
-        return [...cart, { ...product, qty: 1 }];
+        return [...cart, { ...product, qty: Math.min(product.stock, qty) }];
       });
       setNotice(`${product.name} added to cart`);
     },
@@ -31,14 +29,13 @@ export default function useCart() {
   const setQty = useCallback(
     (id, qty) =>
       setItems((cart) =>
-        qty < 1
-          ? cart.filter((i) => i.id !== id)
-          : cart.map((i) => (i.id === id ? { ...i, qty: Math.min(i.stock, qty) } : i))
+        qty < 1 ? cart.filter((i) => i.id !== id) : cart.map((i) => (i.id === id ? { ...i, qty: Math.min(i.stock, qty) } : i))
       ),
     [setItems]
   );
 
   const remove = useCallback((id) => setItems((cart) => cart.filter((i) => i.id !== id)), [setItems]);
+  const clear = useCallback(() => setItems([]), [setItems]);
 
   const totals = useMemo(() => {
     const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
@@ -47,5 +44,5 @@ export default function useCart() {
     return { subtotal, count, shipping, total: subtotal + shipping };
   }, [items]);
 
-  return { items, add, setQty, remove, notice, ...totals };
+  return { items, add, setQty, remove, clear, notice, ...totals };
 }

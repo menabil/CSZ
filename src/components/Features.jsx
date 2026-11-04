@@ -9,7 +9,7 @@ const FEATURES = [
 
 export default function Features() {
   return (
-    <section id="why-csz" className="mx-auto grid max-w-7xl gap-5 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+    <section className="container-x grid gap-5 py-10 sm:grid-cols-2 lg:grid-cols-4">
       {FEATURES.map((f) => (
         <div key={f.title} className="flex items-center gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-tile text-brand"><Icon name={f.icon} /></span>
