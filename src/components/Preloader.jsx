@@ -23,10 +23,10 @@ export default function Preloader() {
   if (gone) return null;
 
   return (
-    <div className={`fixed inset-0 z-50 grid place-items-center bg-white transition-all duration-700 ${hide ? "pointer-events-none -translate-y-4 opacity-0" : ""}`} role="status" aria-label="Loading">
+    <div className={`fixed inset-0 z-50 grid place-items-center bg-page transition-all duration-700 ${hide ? "pointer-events-none -translate-y-4 opacity-0" : ""}`} role="status" aria-label="Loading">
       <div className="w-56 text-center">
         <img src={logo} alt="" className="mx-auto h-16 w-16 animate-pulse rounded-2xl" />
-        <div className="mt-4 text-lg font-bold">Computer Sell Zone</div>
+        <div className="mt-4 text-lg font-bold text-ink">Computer Sell Zone</div>
         <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-tile">
           <div className="h-full rounded-full bg-brand transition-all duration-100" style={{ width: `${progress}%` }} />
         </div>

@@ -36,7 +36,7 @@ export default function Checkout() {
     return (
       <div className="container-x py-16">
         <div className="mx-auto max-w-lg rounded-3xl border border-line bg-card p-8 text-center shadow-soft">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green-100 text-green-600"><Icon name="check" className="h-7 w-7" /></span>
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green-100 text-green-600 dark:bg-green-950/60 dark:text-green-400 dark:border dark:border-green-800/40"><Icon name="check" className="h-7 w-7" /></span>
           <h1 className="mt-5 text-2xl font-bold">Thank you, {order.name}!</h1>
           <p className="mt-2 text-mute">Your order <b className="text-ink">{order.id}</b> has been placed. Total: {money(order.total)} ({PAYMENTS.find((p) => p.id === order.payment).label}).</p>
           <Link to="/shop" className="btn-primary mt-6 h-11 px-6">Continue shopping</Link>
@@ -81,7 +81,7 @@ export default function Checkout() {
             <h2 className="mb-4 text-lg font-semibold">Payment</h2>
             <div className="space-y-3">
               {PAYMENTS.map((p) => (
-                <label key={p.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${payment === p.id ? "border-brand bg-brand/5" : "border-line"}`}>
+                <label key={p.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${payment === p.id ? "border-brand bg-brand/5 dark:bg-brand/15" : "border-line"}`}>
                   <input type="radio" name="payment" checked={payment === p.id} onChange={() => setPayment(p.id)} className="mt-1 h-4 w-4 accent-brand" />
                   <span><span className="block text-sm font-semibold">{p.label}</span><span className="text-sm text-mute">{p.hint}</span></span>
                 </label>

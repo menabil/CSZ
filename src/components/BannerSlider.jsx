@@ -17,7 +17,7 @@ export default function BannerSlider() {
 
   return (
     <section className="container-x pt-6" aria-roledescription="carousel" aria-label="Featured offers" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-      <div className="relative grid overflow-hidden rounded-3xl bg-brand/[0.06]">
+      <div className="relative grid overflow-hidden rounded-3xl border border-line/40 bg-brand/[0.06] dark:border-line/60 dark:bg-brand/[0.12]">
         {BANNERS.map((b, i) => {
           const active = i === index;
           return (

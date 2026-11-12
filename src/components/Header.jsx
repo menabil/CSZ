@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import Icon from "./Icon";
 import Logo from "./Logo";
+import ThemeToggle from "./ThemeToggle";
 import { useCartContext } from "../context/CartContext";
+import { useTheme } from "../context/ThemeContext";
 
 const NAV = [
   { to: "/", label: "Home", end: true },
@@ -14,6 +16,7 @@ const NAV = [
 
 export default function Header() {
   const { count, openCart } = useCartContext();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [menu, setMenu] = useState(false);
@@ -47,6 +50,7 @@ export default function Header() {
         </nav>
         {searchForm("ml-auto hidden max-w-sm flex-1 sm:block")}
         <div className="ml-auto flex items-center gap-2 sm:ml-0">
+          <ThemeToggle />
           <button onClick={openCart} className="btn-primary h-10 px-3 text-sm sm:px-4" aria-label={`Open cart, ${count} items`}>
             <Icon name="cart" />
             <span className="hidden sm:inline">Cart</span>
@@ -67,6 +71,16 @@ export default function Header() {
               </NavLink>
             ))}
           </nav>
+          <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
+            <span className="text-sm font-medium text-mute">Appearance</span>
+            <button
+              onClick={toggleTheme}
+              className="inline-flex items-center gap-2 rounded-lg border border-line bg-tile px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-brand"
+            >
+              <Icon name={isDark ? "sun" : "moon"} className={`h-4 w-4 ${isDark ? "text-amber-400" : "text-slate-600"}`} />
+              <span>{isDark ? "Light mode" : "Dark mode"}</span>
+            </button>
+          </div>
         </div>
       )}
     </header>

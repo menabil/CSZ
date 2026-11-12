@@ -18,7 +18,7 @@ export default function Contact() {
           </div>
           <div><label className="label" htmlFor="c-msg">Message</label><textarea id="c-msg" required rows="5" className="input h-auto py-3" /></div>
           <button className="btn-primary h-11 px-6">Send message</button>
-          {sent && <p className="text-sm text-green-600" role="status">Thanks! Your message was sent (demo).</p>}
+          {sent && <p className="text-sm text-green-600 dark:text-green-400" role="status">Thanks! Your message was sent (demo).</p>}
         </form>
         <div className="space-y-4">
           {info.map(([icon, label, value]) => (

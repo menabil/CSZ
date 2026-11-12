@@ -2,6 +2,7 @@ const c = (name) => `rgb(var(--${name}) / <alpha-value>)`;
 
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
     extend: {
@@ -11,8 +12,8 @@ export default {
       },
       fontFamily: { sans: ["Inter", "system-ui", "sans-serif"] },
       boxShadow: {
-        soft: "0 1px 2px rgb(15 23 42 / 0.05), 0 8px 24px -10px rgb(15 23 42 / 0.15)",
-        lift: "0 2px 4px rgb(15 23 42 / 0.05), 0 18px 36px -14px rgb(37 99 235 / 0.35)",
+        soft: "0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px -10px rgb(0 0 0 / 0.18)",
+        lift: "0 2px 4px rgb(0 0 0 / 0.08), 0 18px 36px -14px rgb(37 99 235 / 0.35)",
       },
     },
   },
