@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import products from "../data/products";
+import { useStore } from "../context/StoreContext";
 import { CATEGORIES, SORT_OPTIONS } from "../data/categories";
 import useProductFilter from "../hooks/useProductFilter";
 import FilterPanel from "../components/FilterPanel";
@@ -15,12 +15,13 @@ export default function Shop() {
 }
 
 function ShopView({ slug }) {
+  const { products } = useStore();
   const category = CATEGORIES.find((c) => c.slug === slug);
   const [params, setParams] = useSearchParams();
   const q = params.get("q") || "";
   const [showFilters, setShowFilters] = useState(false);
 
-  const base = useMemo(() => (category ? products.filter((p) => p.category === category.name) : products), [category]);
+  const base = useMemo(() => (category ? products.filter((p) => p.category === category.name) : products), [category, products]);
   const f = useProductFilter(base, q);
 
   if (slug && !category) return <NotFound />;

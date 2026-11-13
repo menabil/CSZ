@@ -36,6 +36,7 @@ export default function Footer() {
             <li><Link to="/contact" className="hover:text-ink">Contact</Link></li>
             <li><Link to="/categories" className="hover:text-ink">All categories</Link></li>
             <li><Link to="/checkout" className="hover:text-ink">Checkout</Link></li>
+            <li><Link to="/admin" className="font-medium text-brand hover:underline">Admin Panel</Link></li>
           </ul>
         </div>
         <div>

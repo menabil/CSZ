@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { CATEGORIES } from "../data/categories";
 import { categoryImages } from "../assets/images";
-import products from "../data/products";
+import { useStore } from "../context/StoreContext";
 
 export default function CategoryGrid() {
+  const { products } = useStore();
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
       {CATEGORIES.map((c) => (

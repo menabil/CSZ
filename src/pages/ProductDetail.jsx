@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import products from "../data/products";
+import { useStore } from "../context/StoreContext";
 import { categorySlug } from "../data/categories";
 import { categoryImages } from "../assets/images";
 import { describe, features } from "../utils/product";
@@ -13,17 +13,18 @@ import NotFound from "./NotFound";
 
 export default function ProductDetail() {
   const { id } = useParams();
+  const { products } = useStore();
   const product = products.find((p) => p.id === Number(id));
   if (!product) return <NotFound />;
-  return <Detail key={product.id} p={product} />;
+  return <Detail key={product.id} p={product} allProducts={products} />;
 }
 
-function Detail({ p }) {
+function Detail({ p, allProducts }) {
   const { add } = useCartContext();
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
   const out = p.stock === 0;
-  const related = products.filter((x) => x.category === p.category && x.id !== p.id).slice(0, 4);
+  const related = (allProducts || []).filter((x) => x.category === p.category && x.id !== p.id).slice(0, 4);
   const rows = [["Brand", p.brand], ["Category", p.category], ["Warranty", "12 months"], ["Availability", out ? "Out of stock" : `${p.stock} in stock`]];
 
   return (

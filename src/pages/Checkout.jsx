@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useCartContext } from "../context/CartContext";
+import { useStore } from "../context/StoreContext";
 import { categoryImages } from "../assets/images";
 import { money } from "../utils/format";
 import Icon from "../components/Icon";
@@ -22,13 +23,38 @@ function Field({ label, name, type = "text", required = true, ...rest }) {
 
 export default function Checkout() {
   const { items, subtotal, shipping, total, clear } = useCartContext();
+  const { createOrder } = useStore();
   const [payment, setPayment] = useState("cod");
   const [order, setOrder] = useState(null);
 
   const submit = (e) => {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.currentTarget));
-    setOrder({ id: `CSZ-${Date.now().toString().slice(-6)}`, name: data.name, total, payment });
+    const created = createOrder({
+      customer: {
+        name: data.name,
+        phone: data.phone,
+        email: data.email,
+        address: data.address,
+        city: data.city,
+        postcode: data.postcode,
+        note: data.note || "",
+      },
+      items: items.map((i) => ({
+        id: i.id,
+        name: i.name,
+        price: i.price,
+        qty: i.qty,
+        category: i.category,
+        brand: i.brand,
+        spec: i.spec,
+      })),
+      payment,
+      subtotal,
+      shipping,
+      total,
+    });
+    setOrder(created);
     clear();
   };
 
@@ -36,10 +62,21 @@ export default function Checkout() {
     return (
       <div className="container-x py-16">
         <div className="mx-auto max-w-lg rounded-3xl border border-line bg-card p-8 text-center shadow-soft">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green-100 text-green-600 dark:bg-green-950/60 dark:text-green-400 dark:border dark:border-green-800/40"><Icon name="check" className="h-7 w-7" /></span>
-          <h1 className="mt-5 text-2xl font-bold">Thank you, {order.name}!</h1>
-          <p className="mt-2 text-mute">Your order <b className="text-ink">{order.id}</b> has been placed. Total: {money(order.total)} ({PAYMENTS.find((p) => p.id === order.payment).label}).</p>
-          <Link to="/shop" className="btn-primary mt-6 h-11 px-6">Continue shopping</Link>
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green-100 text-green-600 dark:border dark:border-green-800/40 dark:bg-green-950/60 dark:text-green-400">
+            <Icon name="check" className="h-7 w-7" />
+          </span>
+          <h1 className="mt-5 text-2xl font-bold">Thank you, {order.customer?.name || order.name}!</h1>
+          <p className="mt-2 text-mute">
+            Your order <b className="text-ink">{order.id}</b> has been placed and received by our store system. Total: {money(order.total)} ({PAYMENTS.find((p) => p.id === order.payment)?.label || order.payment}).
+          </p>
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-tile px-3 py-1 text-xs font-medium text-mute">
+            <Icon name="clock" className="h-3.5 w-3.5 text-amber-500" />
+            <span>Status: <b className="text-amber-500">Pending</b> (Updated in Admin Panel)</span>
+          </div>
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <Link to="/shop" className="btn-primary h-11 px-6">Continue shopping</Link>
+            <Link to="/admin/orders" className="btn-outline h-11 px-6">View in Admin Panel</Link>
+          </div>
         </div>
       </div>
     );
