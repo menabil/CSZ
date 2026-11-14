@@ -1,7 +1,7 @@
 {
-  "name": "backend",
+  "name": "csz-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "CSZ Store Backend API",
   "main": "server.js",
   "scripts": {
     "test": "node test-api.js",

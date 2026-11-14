@@ -1,0 +1,31 @@
+{
+  "name": "csz-store-root",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=csz-frontend",
+    "start": "npm start --workspace=csz-backend",
+    "install:all": "npm install"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.4",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^7.9.0",
+    "mongoose": "^9.12.1",
+    "multer": "^2.5.0",
+    "nodemailer": "^10.5.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.11"
+  }
+}

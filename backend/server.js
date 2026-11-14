@@ -90,6 +90,10 @@ app.use(notFound);
 app.use(errorHandler);
 
 const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  console.log(`Server is running securely on port: ${port}`);
-});
+if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Server is running securely on port: ${port}`);
+  });
+}
+
+module.exports = app;
