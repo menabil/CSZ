@@ -1,5 +1,6 @@
 const Order = require("../models/orderModel");
 const Product = require("../models/productModel");
+const { sendNewOrderNotification } = require("../utils/emailService");
 
 // @desc    Create a new order (Checkout)
 // @route   POST /api/orders
@@ -96,6 +97,11 @@ const createOrder = async (req, res, next) => {
         }
       }
     }
+
+    // Send email notification to Admin via Nodemailer
+    sendNewOrderNotification(order).catch((err) =>
+      console.error("[Email Notification Warning]", err.message)
+    );
 
     return res.status(201).json({
       success: true,

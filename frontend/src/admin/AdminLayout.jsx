@@ -3,14 +3,30 @@ import Logo from "../components/Logo";
 import Icon from "../components/Icon";
 import ThemeToggle from "../components/ThemeToggle";
 import { useStore } from "../context/StoreContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function AdminLayout() {
   const { stats } = useStore();
+  const { user, isAdmin, isModerator, logout } = useAuth();
 
-  const links = [
-    { to: "/admin", label: "Dashboard", icon: "chart", end: true },
-    { to: "/admin/orders", label: "Orders", icon: "bag", badge: stats.pendingCount },
-    { to: "/admin/products", label: "Products & Stock", icon: "box", badge: stats.outOfStockCount > 0 ? stats.outOfStockCount : null, alert: true },
+  const allLinks = [
+    ...(isAdmin
+      ? [
+          { to: "/admin", label: "Dashboard", icon: "chart", end: true },
+          { to: "/admin/orders", label: "Orders", icon: "bag", badge: stats.pendingCount },
+        ]
+      : []),
+    {
+      to: "/admin/products",
+      label: "Products & Stock",
+      icon: "box",
+      badge: stats.outOfStockCount > 0 ? stats.outOfStockCount : null,
+      alert: true,
+      end: isModerator, // default landing for moderator
+    },
+    ...(isAdmin
+      ? [{ to: "/admin/users", label: "Users & Roles", icon: "user" }]
+      : []),
   ];
 
   return (
@@ -22,11 +38,26 @@ export default function AdminLayout() {
             <Logo />
             <span className="hidden items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-semibold text-brand sm:inline-flex">
               <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
-              Admin Portal
+              {isAdmin ? "Admin Portal" : "Moderator Panel"}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
+            {user && (
+              <div className="hidden sm:flex items-center gap-2 rounded-xl bg-tile px-3 py-1.5 text-xs">
+                <span className="font-semibold text-ink">{user.name}</span>
+                <span className="rounded-md bg-brand/10 px-1.5 py-0.5 font-bold uppercase text-[10px] text-brand">
+                  {user.role}
+                </span>
+                <button
+                  onClick={logout}
+                  className="ml-1 text-mute hover:text-red-500 text-xs font-medium"
+                  title="Sign Out"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
             <ThemeToggle />
             <Link
               to="/"
@@ -34,7 +65,7 @@ export default function AdminLayout() {
               title="Return to Customer Storefront"
             >
               <Icon name="store" className="h-4 w-4" />
-              <span className="hidden sm:inline">Back to Store</span>
+              <span className="hidden sm:inline">Storefront</span>
             </Link>
           </div>
         </div>
@@ -42,7 +73,7 @@ export default function AdminLayout() {
         {/* Admin Navigation Bar */}
         <div className="border-t border-line/60 bg-tile/40 px-4 sm:px-6">
           <div className="container-x flex items-center gap-2 overflow-x-auto py-2 no-scrollbar">
-            {links.map((link) => (
+            {allLinks.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
@@ -60,9 +91,7 @@ export default function AdminLayout() {
                 {link.badge ? (
                   <span
                     className={`ml-1 grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-xs font-bold ${
-                      link.alert
-                        ? "bg-red-500 text-white"
-                        : "bg-amber-500 text-white"
+                      link.alert ? "bg-red-500 text-white" : "bg-amber-500 text-white"
                     }`}
                   >
                     {link.badge}
@@ -81,7 +110,7 @@ export default function AdminLayout() {
 
       {/* Admin Quick Footer */}
       <footer className="mt-12 border-t border-line py-6 text-center text-xs text-mute">
-        CSZ Store Admin Management Panel • Live Synchronization Active
+        CSZ Store Management Panel • Connected to Express Backend & MongoDB
       </footer>
     </div>
   );

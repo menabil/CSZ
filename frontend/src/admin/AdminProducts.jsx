@@ -4,16 +4,18 @@ import { useStore } from "../context/StoreContext";
 import { CATEGORIES } from "../data/categories";
 import { categoryImages } from "../assets/images";
 import { money } from "../utils/format";
+import { api } from "../services/api";
 
 export default function AdminProducts() {
   const { products, updateProductStock, updateProduct, addProduct, deleteProduct } = useStore();
   const [search, setSearch] = useState("");
   const [selectedCat, setSelectedCat] = useState("All");
   const [stockFilter, setStockFilter] = useState("All"); // All, Low, Out
-  const [editingProduct, setEditingProduct] = useState(null); // Product object or null
+  const [editingProduct, setEditingProduct] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
-  // New product form initial state
   const [form, setForm] = useState({
     name: "",
     category: "Processors",
@@ -23,15 +25,16 @@ export default function AdminProducts() {
     oldPrice: "",
     stock: "10",
     badge: "",
+    image: "",
   });
 
   const filtered = products.filter((p) => {
     const term = search.toLowerCase();
     const matchSearch =
       !search ||
-      p.name.toLowerCase().includes(term) ||
-      p.brand.toLowerCase().includes(term) ||
-      p.spec.toLowerCase().includes(term);
+      p.name?.toLowerCase().includes(term) ||
+      p.brand?.toLowerCase().includes(term) ||
+      p.spec?.toLowerCase().includes(term);
     const matchCat = selectedCat === "All" || p.category === selectedCat;
     const matchStock =
       stockFilter === "All" ||
@@ -51,7 +54,9 @@ export default function AdminProducts() {
       oldPrice: "",
       stock: "15",
       badge: "New",
+      image: "",
     });
+    setUploadError("");
     setIsAdding(true);
   };
 
@@ -66,15 +71,43 @@ export default function AdminProducts() {
       oldPrice: p.oldPrice ? String(p.oldPrice) : "",
       stock: String(p.stock),
       badge: p.badge || "",
+      image: p.image || "",
     });
+    setUploadError("");
   };
 
-  const handleSave = (e) => {
+  const handleImageFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please select a valid image file (PNG, JPG, WEBP, SVG)");
+      return;
+    }
+
+    setUploading(true);
+    setUploadError("");
+
+    try {
+      const res = await api.upload.uploadImage(file);
+      if (res && res.url) {
+        setForm((prev) => ({ ...prev, image: res.url }));
+      } else {
+        throw new Error(res.message || "Upload failed");
+      }
+    } catch (err) {
+      setUploadError(err.message || "Failed to upload image to Cloudinary");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!form.name || !form.price) return;
 
     if (editingProduct) {
-      updateProduct(editingProduct.id, {
+      await updateProduct(editingProduct._id || editingProduct.id, {
         name: form.name,
         category: form.category,
         brand: form.brand,
@@ -83,18 +116,20 @@ export default function AdminProducts() {
         oldPrice: form.oldPrice ? Number(form.oldPrice) : null,
         stock: Number(form.stock),
         badge: form.badge || null,
+        image: form.image || "",
       });
       setEditingProduct(null);
     } else {
-      addProduct({
+      await addProduct({
         name: form.name,
         category: form.category,
         brand: form.brand || "Generic",
-        spec: form.spec || "High-performance hardware component",
+        spec: form.spec || "Hardware component",
         price: Number(form.price),
         oldPrice: form.oldPrice ? Number(form.oldPrice) : null,
         stock: Number(form.stock),
         badge: form.badge || null,
+        image: form.image || "",
       });
       setIsAdding(false);
     }
@@ -107,7 +142,7 @@ export default function AdminProducts() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Products & Inventory</h1>
           <p className="mt-1 text-sm text-mute">
-            Live stock control, product catalog management, and price adjustments.
+            Add hardware products, upload product images to Cloudinary, and manage stock levels.
           </p>
         </div>
         <button onClick={handleOpenAdd} className="btn-primary h-10 px-4 text-sm gap-2">
@@ -118,7 +153,6 @@ export default function AdminProducts() {
       {/* Filters & Search */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2">
-          {/* Category Filter */}
           <select
             value={selectedCat}
             onChange={(e) => setSelectedCat(e.target.value)}
@@ -132,7 +166,6 @@ export default function AdminProducts() {
             ))}
           </select>
 
-          {/* Stock Level Filter */}
           <select
             value={stockFilter}
             onChange={(e) => setStockFilter(e.target.value)}
@@ -145,7 +178,6 @@ export default function AdminProducts() {
           </select>
         </div>
 
-        {/* Search */}
         <div className="relative min-w-[260px]">
           <Icon name="search" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mute" />
           <input
@@ -176,19 +208,29 @@ export default function AdminProducts() {
               {filtered.map((prod) => {
                 const isOut = prod.stock === 0;
                 const isLow = !isOut && prod.stock <= 5;
+                const prodId = prod._id || prod.id;
 
                 return (
-                  <tr key={prod.id} className="transition hover:bg-tile/30">
+                  <tr key={prodId} className="transition hover:bg-tile/30">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <img
-                          src={categoryImages[prod.category] || categoryImages["Processors"]}
+                          src={prod.image || categoryImages[prod.category] || categoryImages["Processors"]}
                           alt=""
-                          className="h-10 w-10 shrink-0 rounded-lg bg-tile object-contain p-1"
+                          className="h-10 w-10 shrink-0 rounded-lg bg-tile object-contain p-1 border border-line/40"
                         />
                         <div className="min-w-0">
-                          <div className="font-semibold text-ink leading-tight">{prod.name}</div>
-                          <div className="text-xs text-mute">{prod.brand} • {prod.spec}</div>
+                          <div className="font-semibold text-ink leading-tight flex items-center gap-1.5">
+                            <span>{prod.name}</span>
+                            {prod.image && (
+                              <span className="rounded bg-brand/10 px-1 py-0.2 text-[9px] font-bold text-brand uppercase">
+                                Cloudinary
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-mute">
+                            {prod.brand} • {prod.spec}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -204,7 +246,7 @@ export default function AdminProducts() {
                     <td className="px-5 py-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <button
-                          onClick={() => updateProductStock(prod.id, prod.stock - 1)}
+                          onClick={() => updateProductStock(prodId, prod.stock - 1)}
                           disabled={prod.stock <= 0}
                           className="grid h-7 w-7 place-items-center rounded border border-line hover:bg-tile disabled:opacity-30"
                           title="Decrease stock"
@@ -215,11 +257,11 @@ export default function AdminProducts() {
                           type="number"
                           min="0"
                           value={prod.stock}
-                          onChange={(e) => updateProductStock(prod.id, e.target.value)}
+                          onChange={(e) => updateProductStock(prodId, e.target.value)}
                           className="input h-7 w-14 px-1 text-center text-xs font-semibold"
                         />
                         <button
-                          onClick={() => updateProductStock(prod.id, prod.stock + 1)}
+                          onClick={() => updateProductStock(prodId, prod.stock + 1)}
                           className="grid h-7 w-7 place-items-center rounded border border-line hover:bg-tile"
                           title="Increase stock"
                         >
@@ -257,7 +299,7 @@ export default function AdminProducts() {
                         <button
                           onClick={() => {
                             if (window.confirm(`Delete ${prod.name}?`)) {
-                              deleteProduct(prod.id);
+                              deleteProduct(prodId);
                             }
                           }}
                           className="btn-outline h-8 w-8 px-0 text-mute hover:text-red-500"
@@ -293,10 +335,45 @@ export default function AdminProducts() {
               {editingProduct ? "Edit Product" : "Add New Product"}
             </h2>
             <p className="text-xs text-mute mt-0.5">
-              Updates to stock or price will instantly reflect in the store.
+              Product updates and Cloudinary uploads are saved directly to MongoDB.
             </p>
 
             <form onSubmit={handleSave} className="mt-5 space-y-4">
+              {/* Product Image & Cloudinary Uploader */}
+              <div className="rounded-2xl border border-line bg-tile/40 p-4">
+                <label className="label mb-2">Product Image (Cloudinary Upload)</label>
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-line bg-card grid place-items-center">
+                    {form.image ? (
+                      <img src={form.image} alt="Preview" className="h-full w-full object-contain p-1" />
+                    ) : (
+                      <span className="text-[10px] text-mute text-center px-1">No Image</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      disabled={uploading}
+                      className="block w-full text-xs text-mute file:mr-2.5 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand file:text-onbrand hover:file:brightness-110 cursor-pointer"
+                    />
+                    <div className="mt-1 text-[11px] text-mute">
+                      {uploading ? (
+                        <span className="text-brand font-medium animate-pulse">
+                          Uploading to Cloudinary...
+                        </span>
+                      ) : (
+                        "Uploads directly to Cloudinary CDN storage"
+                      )}
+                    </div>
+                    {uploadError && (
+                      <div className="text-[11px] text-red-500 mt-1">{uploadError}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="label">Product Name</label>
                 <input
@@ -405,7 +482,11 @@ export default function AdminProducts() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary h-10 px-5 text-sm">
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="btn-primary h-10 px-5 text-sm"
+                >
                   {editingProduct ? "Save Changes" : "Create Product"}
                 </button>
               </div>

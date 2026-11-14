@@ -1,195 +1,196 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import initialProducts from "../data/products";
+import { api } from "../services/api";
 
 const StoreContext = createContext(null);
 
-const STORAGE_PRODUCTS_KEY = "csz-products";
-const STORAGE_ORDERS_KEY = "csz-orders";
-
-const INITIAL_ORDERS = [
-  {
-    id: "CSZ-584219",
-    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(), // 5 hours ago
-    customer: {
-      name: "Tanvir Ahmed",
-      phone: "01712345678",
-      email: "tanvir@example.com",
-      address: "House 24, Road 7, Dhanmondi",
-      city: "Dhaka",
-      postcode: "1205",
-      note: "Please call before delivery",
-    },
-    items: [
-      { id: 1, name: "Ryzen 7 7800X3D", category: "Processors", brand: "AMD", price: 389, qty: 1, spec: "8 cores · 16 threads · AM5" },
-      { id: 10, name: "Vengeance DDR5 32GB Kit", category: "Memory", brand: "Corsair", price: 109, qty: 2, spec: "2×16 GB · 6000 MHz · CL30" },
-    ],
-    payment: "bkash",
-    subtotal: 607,
-    shipping: 0,
-    total: 607,
-    status: "Processing",
-  },
-  {
-    id: "CSZ-492103",
-    createdAt: new Date(Date.now() - 3600000 * 28).toISOString(), // Yesterday
-    customer: {
-      name: "Nusrat Jahan",
-      phone: "01898765432",
-      email: "nusrat@example.com",
-      address: "Flat 4B, Sector 11, Uttara",
-      city: "Dhaka",
-      postcode: "1230",
-      note: "Deliver after 4 PM",
-    },
-    items: [
-      { id: 6, name: "Dual GeForce RTX 4070 Super 12GB", category: "Graphics Cards", brand: "ASUS", price: 599, qty: 1, spec: "12 GB GDDR6X · Dual fan · HDMI/DP" },
-    ],
-    payment: "card",
-    subtotal: 599,
-    shipping: 0,
-    total: 599,
-    status: "Delivered",
-  },
-];
-
 export function StoreProvider({ children }) {
-  // Products state backed by localStorage
-  const [products, setProducts] = useState(() => {
+  const [products, setProducts] = useState(initialProducts);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch products from backend API
+  const fetchProducts = useCallback(async () => {
     try {
-      const saved = localStorage.getItem(STORAGE_PRODUCTS_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      const res = await api.products.getAll();
+      if (res && res.products && res.products.length > 0) {
+        // Map _id to id if needed for compatibility
+        const mapped = res.products.map((p) => ({
+          ...p,
+          id: p._id || p.id,
+        }));
+        setProducts(mapped);
       }
-    } catch {
-      // fallback
+    } catch (err) {
+      console.warn("Backend products fetch failed, using local catalog:", err.message);
     }
-    return initialProducts;
-  });
+  }, []);
 
-  // Orders state backed by localStorage
-  const [orders, setOrders] = useState(() => {
+  // Fetch orders from backend API
+  const fetchOrders = useCallback(async () => {
     try {
-      const saved = localStorage.getItem(STORAGE_ORDERS_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+      const res = await api.orders.getAll();
+      if (res && res.orders) {
+        const mapped = res.orders.map((o) => ({
+          ...o,
+          id: o.orderId || o._id || o.id,
+        }));
+        setOrders(mapped);
       }
-    } catch {
-      // fallback
-    }
-    return INITIAL_ORDERS;
-  });
-
-  // Sync products to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_PRODUCTS_KEY, JSON.stringify(products));
-    } catch {
-      // ignore
-    }
-  }, [products]);
-
-  // Sync orders to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(orders));
-    } catch {
-      // ignore
-    }
-  }, [orders]);
-
-  // Create a new order when customer completes checkout
-  const createOrder = (orderData) => {
-    const newOrder = {
-      id: `CSZ-${Math.floor(100000 + Math.random() * 900000)}`,
-      createdAt: new Date().toISOString(),
-      status: "Pending",
-      ...orderData,
-    };
-
-    // 1. Decrement stock for purchased items
-    setProducts((prev) =>
-      prev.map((prod) => {
-        const purchased = orderData.items?.find((i) => i.id === prod.id);
-        if (purchased) {
-          return {
-            ...prod,
-            stock: Math.max(0, prod.stock - (purchased.qty || 1)),
-          };
+    } catch (err) {
+      // If user is guest or not admin, try fetching their own orders
+      try {
+        const myRes = await api.orders.getMyOrders();
+        if (myRes && myRes.orders) {
+          const mapped = myRes.orders.map((o) => ({
+            ...o,
+            id: o.orderId || o._id || o.id,
+          }));
+          setOrders(mapped);
         }
-        return prod;
-      })
-    );
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
 
-    // 2. Prepend order to orders list
-    setOrders((prev) => [newOrder, ...prev]);
+  useEffect(() => {
+    Promise.all([fetchProducts(), fetchOrders()]).finally(() => setLoading(false));
+  }, [fetchProducts, fetchOrders]);
 
-    return newOrder;
+  // Create Order (Checkout) -> saves in MongoDB & sends Nodemailer email to Admin
+  const createOrder = async (orderData) => {
+    try {
+      const res = await api.orders.create(orderData);
+      if (res && res.order) {
+        const created = {
+          ...res.order,
+          id: res.order.orderId || res.order._id,
+        };
+        setOrders((prev) => [created, ...prev]);
+
+        // Refresh live products from DB (stock updated)
+        fetchProducts();
+        return created;
+      }
+      throw new Error(res.message || "Failed to create order");
+    } catch (err) {
+      console.error("Order creation fallback:", err.message);
+      // Local fallback in case backend is offline
+      const localId = `CSZ-${Math.floor(100000 + Math.random() * 900000)}`;
+      const localOrder = {
+        id: localId,
+        orderId: localId,
+        createdAt: new Date().toISOString(),
+        status: "Pending",
+        ...orderData,
+      };
+      setOrders((prev) => [localOrder, ...prev]);
+      setProducts((prev) =>
+        prev.map((prod) => {
+          const item = orderData.items?.find((i) => i.id === prod.id || i.name === prod.name);
+          return item ? { ...prod, stock: Math.max(0, prod.stock - (item.qty || 1)) } : prod;
+        })
+      );
+      return localOrder;
+    }
   };
 
-  // Update order status (Pending, Processing, Shipped, Delivered, Cancelled)
-  const updateOrderStatus = (orderId, newStatus) => {
+  // Update order status
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await api.orders.updateStatus(orderId, newStatus);
+    } catch (err) {
+      console.warn("API update order status error:", err.message);
+    }
     setOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id !== orderId) return ord;
-        return { ...ord, status: newStatus };
-      })
+      prev.map((ord) => (ord.id === orderId || ord.orderId === orderId ? { ...ord, status: newStatus } : ord))
     );
   };
 
   // Delete an order
-  const deleteOrder = (orderId) => {
-    setOrders((prev) => prev.filter((ord) => ord.id !== orderId));
+  const deleteOrder = async (orderId) => {
+    try {
+      await api.orders.delete(orderId);
+    } catch (err) {
+      console.warn("API delete order error:", err.message);
+    }
+    setOrders((prev) => prev.filter((ord) => ord.id !== orderId && ord.orderId !== orderId));
   };
 
   // Update stock level for a product
-  const updateProductStock = (productId, newStock) => {
+  const updateProductStock = async (productId, newStock) => {
     const parsedStock = Math.max(0, parseInt(newStock, 10) || 0);
+    try {
+      await api.products.updateStock(productId, parsedStock);
+    } catch (err) {
+      console.warn("API update stock error:", err.message);
+    }
     setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, stock: parsedStock } : p))
+      prev.map((p) => (p.id === productId || p._id === productId ? { ...p, stock: parsedStock } : p))
     );
   };
 
-  // Update product details (price, stock, spec, badge, etc.)
-  const updateProduct = (productId, updates) => {
+  // Update product details
+  const updateProduct = async (productId, updates) => {
+    try {
+      const res = await api.products.update(productId, updates);
+      if (res && res.product) {
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === productId || p._id === productId ? { ...p, ...res.product, id: res.product._id || p.id } : p
+          )
+        );
+        return res.product;
+      }
+    } catch (err) {
+      console.warn("API update product error:", err.message);
+    }
     setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, ...updates } : p))
+      prev.map((p) => (p.id === productId || p._id === productId ? { ...p, ...updates } : p))
     );
   };
 
-  // Add a new product to store catalog
-  const addProduct = (productData) => {
-    const newId = products.length > 0 ? Math.max(...products.map((p) => p.id)) + 1 : 1;
-    const newProduct = {
-      id: newId,
+  // Add a new product (Moderator or Admin)
+  const addProduct = async (productData) => {
+    try {
+      const res = await api.products.create(productData);
+      if (res && res.product) {
+        const added = { ...res.product, id: res.product._id || res.product.id };
+        setProducts((prev) => [added, ...prev]);
+        return added;
+      }
+    } catch (err) {
+      console.warn("API create product error:", err.message);
+    }
+    const localId = `p-${Date.now()}`;
+    const localProduct = {
+      id: localId,
       rating: 5.0,
       reviews: 0,
       badge: "New",
       ...productData,
       price: Number(productData.price) || 0,
-      oldPrice: productData.oldPrice ? Number(productData.oldPrice) : null,
       stock: Number(productData.stock) || 0,
     };
-    setProducts((prev) => [newProduct, ...prev]);
-    return newProduct;
+    setProducts((prev) => [localProduct, ...prev]);
+    return localProduct;
   };
 
   // Delete a product
-  const deleteProduct = (productId) => {
-    setProducts((prev) => prev.filter((p) => p.id !== productId));
+  const deleteProduct = async (productId) => {
+    try {
+      await api.products.delete(productId);
+    } catch (err) {
+      console.warn("API delete product error:", err.message);
+    }
+    setProducts((prev) => prev.filter((p) => p.id !== productId && p._id !== productId));
   };
 
-  // Reset demo store data back to initial catalog and demo orders
+  // Reset demo store data back to initial catalog
   const resetStore = () => {
     setProducts(initialProducts);
-    setOrders(INITIAL_ORDERS);
-    try {
-      localStorage.setItem(STORAGE_PRODUCTS_KEY, JSON.stringify(initialProducts));
-      localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(INITIAL_ORDERS));
-    } catch {
-      // ignore
-    }
+    fetchProducts();
   };
 
   // Computed statistics for admin dashboard
@@ -229,6 +230,7 @@ export function StoreProvider({ children }) {
   const value = {
     products,
     orders,
+    loading,
     createOrder,
     updateOrderStatus,
     deleteOrder,
@@ -237,6 +239,8 @@ export function StoreProvider({ children }) {
     addProduct,
     deleteProduct,
     resetStore,
+    fetchProducts,
+    fetchOrders,
     stats,
   };
 
